@@ -1,0 +1,34 @@
+{
+  "collections": [
+    {
+      "id": "perfect-game",
+      "name": "Perfect Game Pitchers",
+      "description": "Pitchers who have thrown a perfect game in Major League Baseball."
+    },
+    {
+      "id": "500-hr-club",
+      "name": "500 Home Run Club",
+      "description": "Sluggers who hit 500 or more career home runs."
+    },
+    {
+      "id": "3000-hit-club",
+      "name": "3,000 Hit Club",
+      "description": "Hitters with 3,000 or more career base hits."
+    },
+    {
+      "id": "cy-young",
+      "name": "Cy Young Winners",
+      "description": "Winners of the Cy Young Award."
+    },
+    {
+      "id": "perfect-game-pitchers",
+      "name": "Perfect Game Pitchers",
+      "description": ""
+    },
+    {
+      "id": "hall-of-fame",
+      "name": "Hall of Famers",
+      "description": "Members of the National Baseball Hall of Fame."
+    }
+  ]
+}

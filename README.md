@@ -1,0 +1,73 @@
+# Autographed Baseball Collection
+
+A static site (no dependencies, plain Node build script) that showcases an autographed
+baseball collection with filtering by collection, plus a **local-only** management screen.
+
+## Layout
+
+| Path | Purpose |
+| --- | --- |
+| `data/baseballs.json` | One record per baseball |
+| `data/collections.json` | Collection definitions (Perfect Game pitchers, 500 HR club, ...) |
+| `images/` | Photo files, referenced by filename from `baseballs.json` |
+| `public/` | Site CSS and client-side filter script |
+| `lib/baseball.mjs` | Shared record normalization / display-title helpers |
+| `scripts/build.mjs` | Static site generator → `dist/` |
+| `admin/`, `tools/admin-server.mjs` | Local management screen (never deployed) |
+
+## Everyday use
+
+```powershell
+npm run admin   # http://localhost:4321 — add/edit baseballs, upload photos
+npm run build   # regenerate dist/
+npm run serve   # http://localhost:5173 — preview dist/
+```
+
+The admin server binds to `127.0.0.1` only and is not part of the published output —
+`dist/` contains just HTML, CSS, JS, and images.
+
+Collections can be added, renamed (including their id, which is remapped across every
+baseball), and deleted from the admin screen. Deleting a collection removes it from any
+baseball that referenced it.
+
+**Photo autoscan:** drop image files straight into `images/`. The admin screen polls for
+loose files that no baseball claims and shows them at the top with *Create record* (which
+starts a new baseball pre-attached to that photo, with the player name guessed from the
+filename) or *Discard*.
+
+After making changes in the admin screen, commit the updated `data/*.json` and new
+`images/*` files and push to `main`; GitHub Actions rebuilds and publishes the site.
+
+## Data shape
+
+A baseball holds one or more signatures and any number of photos. The first photo is the
+cover shown on the card; reorder or remove photos from the admin screen.
+
+```json
+{
+  "id": "1998-yankees-team-ball",
+  "title": "",
+  "signatures": [
+    { "player": "Nolan Ryan", "team": "Texas Rangers", "signedYear": "1993", "inscription": "HOF 99" },
+    { "player": "Tom Seaver", "team": "New York Mets", "signedYear": "", "inscription": "" }
+  ],
+  "acquired": "Private signing",
+  "authentication": "PSA/DNA",
+  "notes": "",
+  "collections": ["hall-of-fame", "cy-young"],
+  "images": ["ryan-seaver.jpg", "ryan-seaver-2.jpg"],
+  "featured": false
+}
+```
+
+`title` is optional — when blank the card title is derived from the signature names
+(`"Nolan Ryan & Tom Seaver"`, or `"A, B & 3 more"` for larger team balls). Older records
+using a single top-level `player`/`team`/`signedYear` are migrated automatically.
+
+The build fails if a baseball has no signatures or references a collection id that does
+not exist in `data/collections.json`.
+
+## One-time GitHub setup
+
+1. Push the repo to GitHub.
+2. **Settings → Pages → Build and deployment → Source: GitHub Actions**.

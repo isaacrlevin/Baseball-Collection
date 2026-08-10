@@ -1,0 +1,15 @@
+{
+  "name": "baseball-collection",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Static site showcasing an autographed baseball collection",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/serve.mjs",
+    "admin": "node tools/admin-server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
