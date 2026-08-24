@@ -1,7 +1,9 @@
 const cards = Array.from(document.querySelectorAll('.card'));
 const chips = Array.from(document.querySelectorAll('.chip'));
 const search = document.getElementById('search');
+const sort = document.getElementById('sort');
 const empty = document.getElementById('empty');
+const grid = document.getElementById('grid');
 const lightbox = document.getElementById('lightbox');
 const lightboxImage = document.getElementById('lightbox-image');
 const lightboxCounter = document.getElementById('lightbox-counter');
@@ -34,7 +36,9 @@ for (const chip of chips) {
     activeFilter = chip.dataset.filter;
     for (const other of chips) other.classList.toggle('chip--active', other === chip);
     const url = new URL(window.location.href);
-    const filterParam = cards.some((card) => card.dataset.year !== undefined) ? 'year' : 'collection';
+    const filterParam = cards.some((card) => card.dataset.collections !== undefined)
+      ? 'collection'
+      : 'year';
     if (activeFilter === 'all') url.searchParams.delete(filterParam);
     else url.searchParams.set(filterParam, activeFilter);
     history.replaceState(null, '', url);
@@ -43,6 +47,36 @@ for (const chip of chips) {
 }
 
 search?.addEventListener('input', applyFilters);
+sort?.addEventListener('change', applySort);
+
+function applySort() {
+  const [field, direction] = sort.value.split('-');
+  const sorted = [...cards].sort((left, right) => {
+    const leftValue = left.dataset[field] ?? '';
+    const rightValue = right.dataset[field] ?? '';
+
+    if (field === 'year') {
+      if (!leftValue && !rightValue) return compareNames(left, right);
+      if (!leftValue) return 1;
+      if (!rightValue) return -1;
+    }
+
+    const comparison = leftValue.localeCompare(rightValue, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+    if (comparison !== 0) return direction === 'desc' ? -comparison : comparison;
+    return compareNames(left, right);
+  });
+  grid.append(...sorted);
+}
+
+function compareNames(left, right) {
+  return (left.dataset.name ?? '').localeCompare(right.dataset.name ?? '', undefined, {
+    numeric: true,
+    sensitivity: 'base'
+  });
+}
 
 document.addEventListener('click', (event) => {
   const media = event.target.closest('.card__media[data-images]');
@@ -114,8 +148,11 @@ function showGalleryImage(index) {
   }
 }
 
-const filterParam = cards.some((card) => card.dataset.year !== undefined) ? 'year' : 'collection';
+const filterParam = cards.some((card) => card.dataset.collections !== undefined)
+  ? 'collection'
+  : 'year';
 const preselected = new URL(window.location.href).searchParams.get(filterParam);
 const preselectedChip = preselected && chips.find((chip) => chip.dataset.filter === preselected);
+applySort();
 if (preselectedChip) preselectedChip.click();
 else applyFilters();

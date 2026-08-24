@@ -43,6 +43,10 @@ async function exists(target) {
 function renderCard(ball, collectionsById) {
   const cover = ball.images[0];
   const title = displayTitle(ball);
+  const sortYear = ball.signatures
+    .map((signature) => signature.signedYear)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))[0] ?? '';
   const tags = ball.collections.map((id) => collectionsById.get(id)).filter(Boolean);
 
   const media = cover
@@ -74,7 +78,7 @@ function renderCard(ball, collectionsById) {
     .join('');
 
   return `
-      <article class="card" data-collections="${escapeHtml(ball.collections.join(' '))}" data-search="${escapeHtml(`${searchText(ball)} ${tags.map((t) => t.name).join(' ').toLowerCase()}`)}"${ball.featured ? ' data-featured="true"' : ''}>
+      <article class="card" data-name="${escapeHtml(title)}" data-year="${escapeHtml(sortYear)}" data-collections="${escapeHtml(ball.collections.join(' '))}" data-search="${escapeHtml(`${searchText(ball)} ${tags.map((t) => t.name).join(' ').toLowerCase()}`)}"${ball.featured ? ' data-featured="true"' : ''}>
         <div class="card__media"${cover ? ` role="button" tabindex="0" data-images="${escapeHtml(JSON.stringify(ball.images))}" data-title="${escapeHtml(title)}"` : ''}>${media}${badges ? `<div class="card__badges">${badges}</div>` : ''}</div>
         <div class="card__body">
           <h2 class="card__title">${escapeHtml(title)}</h2>
@@ -133,6 +137,14 @@ function renderBaseballPage({ baseballs, collections, counts }) {
         <span class="visually-hidden">Search baseballs</span>
         <input type="search" id="search" placeholder="Search by player, team, or collection&hellip;" autocomplete="off">
       </label>
+      <label class="sort">Order by
+        <select id="sort">
+          <option value="name-asc">Name (A&ndash;Z)</option>
+          <option value="name-desc">Name (Z&ndash;A)</option>
+          <option value="year-desc">Year (newest first)</option>
+          <option value="year-asc">Year (oldest first)</option>
+        </select>
+      </label>
     </section>
 
     <p class="empty" id="empty" hidden>No baseballs match those filters.</p>
@@ -173,7 +185,7 @@ function renderBobbleheadCard(bobblehead) {
     : '';
 
   return `
-      <article class="card" data-year="${escapeHtml(bobblehead.year)}" data-search="${escapeHtml(bobbleheadSearchText(bobblehead))}">
+      <article class="card" data-name="${escapeHtml(bobblehead.name)}" data-year="${escapeHtml(bobblehead.year)}" data-search="${escapeHtml(bobbleheadSearchText(bobblehead))}">
         <div class="card__media"${cover ? ` role="button" tabindex="0" data-image-folder="bobbleheads" data-images="${escapeHtml(JSON.stringify(bobblehead.images))}" data-title="${escapeHtml(bobblehead.name)}" data-item-type="Bobblehead"` : ''}>${media}${badges}</div>
         <div class="card__body">
           <h2 class="card__title">${escapeHtml(bobblehead.name)}</h2>
@@ -216,6 +228,14 @@ function renderBobbleheadPage(bobbleheads) {
       <div class="chips" role="group" aria-label="Filter by year">
         ${filters}
       </div>
+      <label class="sort">Order by
+        <select id="sort">
+          <option value="name-asc">Name (A&ndash;Z)</option>
+          <option value="name-desc">Name (Z&ndash;A)</option>
+          <option value="year-desc">Year (newest first)</option>
+          <option value="year-asc">Year (oldest first)</option>
+        </select>
+      </label>
     </section>
     <p class="empty" id="empty" hidden>No bobbleheads match that year.</p>
     <section class="grid" id="grid">

@@ -130,7 +130,8 @@ main {
   margin-left: 0.25rem;
 }
 
-.search input {
+.search input,
+.sort select {
   background: var(--panel-2);
   border: 1px solid var(--border);
   color: var(--ink);
@@ -140,7 +141,22 @@ main {
   font-size: 0.95rem;
 }
 
+.sort {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.sort select {
+  min-width: 175px;
+  cursor: pointer;
+}
+
 .search input:focus-visible,
+.sort select:focus-visible,
 .chip:focus-visible,
 .card__media:focus-visible {
   outline: 2px solid var(--accent);
