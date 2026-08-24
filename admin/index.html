@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>Collection Manager</h1>
-    <p class="muted">Local only &mdash; edits <code>data/*.json</code> and <code>images/</code>. Run <code>npm run build</code> afterwards to refresh the site.</p>
+    <p class="muted">Local only &mdash; edits <code>data/*.json</code> and the collection folders in <code>images/</code>. Run <code>npm run build</code> afterwards to refresh the site.</p>
   </header>
 
   <p id="status" class="status" hidden></p>
@@ -17,8 +17,10 @@
   <main>
     <nav class="tabs" role="tablist" aria-label="Collection manager pages">
       <button type="button" role="tab" aria-selected="true" aria-controls="baseballs-page" id="baseballs-tab" data-tab-target="baseballs-page">Add baseball</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="bobbleheads-page" id="bobbleheads-tab" data-tab-target="bobbleheads-page" tabindex="-1">Add bobblehead</button>
       <button type="button" role="tab" aria-selected="false" aria-controls="collections-page" id="collections-tab" data-tab-target="collections-page" tabindex="-1">Collections</button>
       <button type="button" role="tab" aria-selected="false" aria-controls="unscanned-page" id="unscanned-tab" data-tab-target="unscanned-page" tabindex="-1">Unscanned balls <span id="unscanned-tab-count"></span></button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="unscanned-bobbleheads-page" id="unscanned-bobbleheads-tab" data-tab-target="unscanned-bobbleheads-page" tabindex="-1">Unscanned bobbleheads <span id="unscanned-bobbleheads-tab-count"></span></button>
     </nav>
 
     <div class="tab-page" id="baseballs-page" role="tabpanel" aria-labelledby="baseballs-tab">
@@ -61,9 +63,12 @@
 
           <fieldset>
             <legend>Photos</legend>
-            <p class="muted">The first photo is the cover shown on the site card.</p>
+            <p class="muted">Remove existing photos below or add more. Changes are applied when you save the baseball; the first photo is the cover.</p>
             <div id="existing-images" class="thumbs"></div>
-            <input type="file" id="new-images" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" multiple>
+            <label class="file-picker">Add photos
+              <input type="file" id="new-images" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" multiple>
+            </label>
+            <p id="new-images-summary" class="muted photo-summary" hidden></p>
           </fieldset>
 
           <div class="actions">
@@ -76,6 +81,43 @@
       <section class="panel">
         <h2>Baseballs (<span id="ball-count">0</span>)</h2>
         <ul id="ball-list" class="ball-list"></ul>
+      </section>
+    </div>
+
+    <div class="tab-page" id="bobbleheads-page" role="tabpanel" aria-labelledby="bobbleheads-tab" hidden>
+      <section class="panel">
+        <h2 id="bobblehead-form-title">Add a bobblehead</h2>
+        <form id="bobblehead-form" autocomplete="off">
+          <input type="hidden" name="originalId">
+          <div class="row">
+            <label>Name *
+              <input name="name" required placeholder="Ken Griffey Jr.">
+            </label>
+            <label>Year
+              <input name="year" inputmode="numeric" placeholder="2024">
+            </label>
+          </div>
+          <label>Notes
+            <textarea name="notes" rows="3"></textarea>
+          </label>
+          <fieldset>
+            <legend>Photos</legend>
+            <p class="muted">Remove existing photos below or add more. Changes are applied when you save the bobblehead; the first photo is the cover.</p>
+            <div id="bobblehead-existing-images" class="thumbs"></div>
+            <label class="file-picker">Add photos
+              <input type="file" id="bobblehead-new-images" accept="image/png,image/jpeg,image/webp,image/avif,image/gif" multiple>
+            </label>
+            <p id="bobblehead-new-images-summary" class="muted photo-summary" hidden></p>
+          </fieldset>
+          <div class="actions">
+            <button type="submit" class="primary">Save bobblehead</button>
+            <button type="button" id="reset-bobblehead-form">Clear</button>
+          </div>
+        </form>
+      </section>
+      <section class="panel">
+        <h2>Bobbleheads (<span id="bobblehead-count">0</span>)</h2>
+        <ul id="bobblehead-list" class="ball-list"></ul>
       </section>
     </div>
 
@@ -107,14 +149,30 @@
 
     <div class="tab-page" id="unscanned-page" role="tabpanel" aria-labelledby="unscanned-tab" hidden>
       <section class="panel panel--alert" id="scan-panel" hidden>
-        <h2>New photos found in <code>images/</code> (<span id="scan-count">0</span>)</h2>
+        <h2>New photos found in <code>images/baseballs/</code> (<span id="scan-count">0</span>)</h2>
         <p class="muted">Check photos below to select multiple, then combine them into one record (e.g. a team ball). Player names and years are guessed from the file name.</p>
-        <div id="scan-thumbs" class="thumbs thumbs--scan"></div>
-        <div id="scan-actions" class="actions" hidden>
-          <button type="button" class="primary" id="scan-create-selected"></button>
+        <div id="scan-actions" class="actions scan-actions">
+          <button type="button" id="scan-select-all">Select all</button>
+          <button type="button" id="scan-clear-selected">Clear selection</button>
+          <button type="button" class="primary" id="scan-create-selected" disabled>Select photos to create a record</button>
         </div>
+        <div id="scan-thumbs" class="thumbs thumbs--scan"></div>
       </section>
       <p class="tab-empty" id="scan-empty">No unscanned baseball photos found.</p>
+    </div>
+
+    <div class="tab-page" id="unscanned-bobbleheads-page" role="tabpanel" aria-labelledby="unscanned-bobbleheads-tab" hidden>
+      <section class="panel panel--alert" id="bobblehead-scan-panel" hidden>
+        <h2>New photos found in <code>images/bobbleheads/</code> (<span id="bobblehead-scan-count">0</span>)</h2>
+        <p class="muted">Check photos below to select multiple, then combine them into one bobblehead. The name and year are guessed from the file name.</p>
+        <div id="bobblehead-scan-actions" class="actions scan-actions">
+          <button type="button" id="bobblehead-scan-select-all">Select all</button>
+          <button type="button" id="bobblehead-scan-clear-selected">Clear selection</button>
+          <button type="button" class="primary" id="bobblehead-scan-create-selected" disabled>Select photos to create a record</button>
+        </div>
+        <div id="bobblehead-scan-thumbs" class="thumbs thumbs--scan"></div>
+      </section>
+      <p class="tab-empty" id="bobblehead-scan-empty">No unscanned bobblehead photos found.</p>
     </div>
   </main>
 

@@ -3,19 +3,25 @@ const chips = Array.from(document.querySelectorAll('.chip'));
 const search = document.getElementById('search');
 const empty = document.getElementById('empty');
 const lightbox = document.getElementById('lightbox');
-const lightboxImages = document.getElementById('lightbox-images');
+const lightboxImage = document.getElementById('lightbox-image');
+const lightboxCounter = document.getElementById('lightbox-counter');
+const lightboxThumbnails = document.getElementById('lightbox-thumbnails');
+const previousButton = lightbox.querySelector('[data-gallery-prev]');
+const nextButton = lightbox.querySelector('[data-gallery-next]');
 
 let activeFilter = 'all';
+let galleryImages = [];
+let galleryIndex = 0;
 
 function applyFilters() {
-  const term = search.value.trim().toLowerCase();
+  const term = search?.value.trim().toLowerCase() ?? '';
   let visible = 0;
 
   for (const card of cards) {
-    const inCollection =
-      activeFilter === 'all' || card.dataset.collections.split(' ').includes(activeFilter);
+    const values = card.dataset.collections?.split(' ') ?? [card.dataset.year];
+    const matchesFilter = activeFilter === 'all' || values.includes(activeFilter);
     const matchesTerm = !term || card.dataset.search.includes(term);
-    const show = inCollection && matchesTerm;
+    const show = matchesFilter && matchesTerm;
     card.hidden = !show;
     if (show) visible += 1;
   }
@@ -28,22 +34,30 @@ for (const chip of chips) {
     activeFilter = chip.dataset.filter;
     for (const other of chips) other.classList.toggle('chip--active', other === chip);
     const url = new URL(window.location.href);
-    if (activeFilter === 'all') url.searchParams.delete('collection');
-    else url.searchParams.set('collection', activeFilter);
+    const filterParam = cards.some((card) => card.dataset.year !== undefined) ? 'year' : 'collection';
+    if (activeFilter === 'all') url.searchParams.delete(filterParam);
+    else url.searchParams.set(filterParam, activeFilter);
     history.replaceState(null, '', url);
     applyFilters();
   });
 }
 
-search.addEventListener('input', applyFilters);
+search?.addEventListener('input', applyFilters);
 
 document.addEventListener('click', (event) => {
   const media = event.target.closest('.card__media[data-images]');
   if (media) openLightbox(media);
   if (event.target.closest('[data-close]')) lightbox.close();
+  if (event.target.closest('[data-gallery-prev]')) showGalleryImage(galleryIndex - 1);
+  if (event.target.closest('[data-gallery-next]')) showGalleryImage(galleryIndex + 1);
 });
 
 document.addEventListener('keydown', (event) => {
+  if (lightbox.open && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    event.preventDefault();
+    showGalleryImage(galleryIndex + (event.key === 'ArrowRight' ? 1 : -1));
+    return;
+  }
   if (event.key !== 'Enter' && event.key !== ' ') return;
   const media = event.target.closest?.('.card__media[data-images]');
   if (!media) return;
@@ -58,18 +72,50 @@ function openLightbox(media) {
   } catch {
     return;
   }
-  lightboxImages.replaceChildren(
-    ...images.map((file) => {
-      const img = document.createElement('img');
-      img.src = `images/${encodeURIComponent(file)}`;
-      img.alt = `Baseball signed by ${media.dataset.title}`;
-      return img;
+  const folder = media.dataset.imageFolder ?? 'baseballs';
+  const alt = `${media.dataset.itemType ?? 'Baseball signed by'} ${media.dataset.title}`;
+  galleryImages = images.map((file) => ({
+    src: `images/${folder}/${encodeURIComponent(file)}`,
+    alt
+  }));
+  galleryIndex = 0;
+  lightboxThumbnails.replaceChildren(
+    ...galleryImages.map((image, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'lightbox__thumbnail';
+      button.setAttribute('aria-label', `View photo ${index + 1}`);
+      const thumbnail = document.createElement('img');
+      thumbnail.src = image.src;
+      thumbnail.alt = '';
+      button.append(thumbnail);
+      button.addEventListener('click', () => showGalleryImage(index));
+      return button;
     })
   );
+  showGalleryImage(0);
   lightbox.showModal();
 }
 
-const preselected = new URL(window.location.href).searchParams.get('collection');
+function showGalleryImage(index) {
+  if (galleryImages.length === 0) return;
+  galleryIndex = (index + galleryImages.length) % galleryImages.length;
+  const image = galleryImages[galleryIndex];
+  lightboxImage.src = image.src;
+  lightboxImage.alt = image.alt;
+  lightboxCounter.textContent = `${galleryIndex + 1} of ${galleryImages.length}`;
+  previousButton.hidden = galleryImages.length < 2;
+  nextButton.hidden = galleryImages.length < 2;
+  lightboxThumbnails.hidden = galleryImages.length < 2;
+  for (const [thumbnailIndex, thumbnail] of [...lightboxThumbnails.children].entries()) {
+    const current = thumbnailIndex === galleryIndex;
+    thumbnail.classList.toggle('lightbox__thumbnail--active', current);
+    thumbnail.setAttribute('aria-current', current ? 'true' : 'false');
+  }
+}
+
+const filterParam = cards.some((card) => card.dataset.year !== undefined) ? 'year' : 'collection';
+const preselected = new URL(window.location.href).searchParams.get(filterParam);
 const preselectedChip = preselected && chips.find((chip) => chip.dataset.filter === preselected);
 if (preselectedChip) preselectedChip.click();
 else applyFilters();

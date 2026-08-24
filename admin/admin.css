@@ -52,7 +52,7 @@ h1 {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.35rem;
   margin-top: 1.5rem;
   padding: 0.35rem;
@@ -123,6 +123,14 @@ h1 {
   width: 140px;
   display: grid;
   gap: 0.35rem;
+  padding: 0.4rem;
+  border: 2px solid transparent;
+  border-radius: 10px;
+}
+
+.thumb--scan.thumb--selected {
+  border-color: var(--accent);
+  background: rgba(216, 86, 43, 0.12);
 }
 
 .thumb--scan .thumb__select {
@@ -312,6 +320,8 @@ legend {
 .thumb {
   position: relative;
   width: 96px;
+  display: grid;
+  gap: 0.25rem;
 }
 
 .thumb img {
@@ -322,23 +332,45 @@ legend {
   border: 1px solid var(--border);
 }
 
-.thumb button {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: none;
+.thumb .thumb__remove {
+  position: static;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid var(--danger);
   background: var(--danger);
   color: #fff;
   cursor: pointer;
-  line-height: 1;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  padding: 0.25rem;
+}
+
+.file-picker {
+  max-width: 420px;
+}
+
+.photo-summary {
+  margin: 0.4rem 0 0;
 }
 
 .actions {
   display: flex;
   gap: 0.6rem;
+}
+
+.scan-actions {
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.scan-actions .primary {
+  margin-left: auto;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 button {

@@ -7,13 +7,16 @@ import { readFile, readdir, writeFile, stat, unlink, mkdir } from 'node:fs/promi
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { normalizeBaseball as normalizeStored } from '../lib/baseball.mjs';
+import { normalizeBobblehead } from '../lib/bobblehead.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const adminDir = path.join(root, 'admin');
 const libDir = path.join(root, 'lib');
 const dataDir = path.join(root, 'data');
 const imagesDir = path.join(root, 'images');
-const port = Number(process.env.ADMIN_PORT ?? 4321);
+const baseballImagesDir = path.join(imagesDir, 'baseballs');
+const bobbleheadImagesDir = path.join(imagesDir, 'bobbleheads');
+const port = Number(process.env.ADMIN_PORT ?? 7777);
 
 const MAX_BODY_BYTES = 40 * 1024 * 1024;
 const IMAGE_TYPES = {
@@ -50,17 +53,17 @@ const readJson = async (file) => JSON.parse(await readFile(path.join(dataDir, fi
 const writeJson = (file, value) =>
   writeFile(path.join(dataDir, file), `${JSON.stringify(value, null, 2)}\n`);
 
-async function listImageFiles() {
-  const entries = await readdir(imagesDir, { withFileTypes: true }).catch(() => []);
+async function listImageFiles(directory = baseballImagesDir) {
+  const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
   return entries
     .filter((entry) => entry.isFile() && IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
     .map((entry) => entry.name)
     .sort();
 }
 
-async function findUnassignedImages(baseballs) {
-  const used = new Set(baseballs.flatMap((ball) => ball.images ?? []));
-  const files = await listImageFiles();
+async function findUnassignedImages(records, directory) {
+  const used = new Set(records.flatMap((record) => record.images ?? []));
+  const files = await listImageFiles(directory);
   return files.filter((name) => !used.has(name));
 }
 
@@ -94,7 +97,7 @@ function readBody(req) {
   });
 }
 
-async function saveImage(baseName, image) {
+async function saveImage(directory, baseName, image) {
   const extension = IMAGE_TYPES[image.type];
   if (!extension) throw new Error(`Unsupported image type: ${image.type}`);
 
@@ -102,15 +105,15 @@ async function saveImage(baseName, image) {
   const buffer = Buffer.from(base64, 'base64');
   if (!buffer.length) throw new Error('Empty image upload');
 
-  await mkdir(imagesDir, { recursive: true });
+  await mkdir(directory, { recursive: true });
 
   let fileName = `${baseName}${extension}`;
   let counter = 2;
-  while (await stat(path.join(imagesDir, fileName)).catch(() => null)) {
+  while (await stat(path.join(directory, fileName)).catch(() => null)) {
     fileName = `${baseName}-${counter++}${extension}`;
   }
 
-  await writeFile(path.join(imagesDir, fileName), buffer);
+  await writeFile(path.join(directory, fileName), buffer);
   return fileName;
 }
 
@@ -127,33 +130,63 @@ function buildRecord(input, knownCollections, existingId) {
   return record;
 }
 
+function buildBobblehead(input, existingId) {
+  const record = normalizeBobblehead(input);
+  if (!record.name) throw new Error('Bobblehead name is required.');
+  record.id = existingId ?? (slug(record.name) || `bobblehead-${Date.now()}`);
+  record.images = [];
+  return record;
+}
+
 const routes = {
   async 'GET /api/data'() {
-    const [{ baseballs = [] }, { collections = [] }] = await Promise.all([
+    const [{ baseballs = [] }, { bobbleheads = [] }, { collections = [] }] = await Promise.all([
       readJson('baseballs.json'),
+      readJson('bobbleheads.json'),
       readJson('collections.json')
     ]);
     return {
       baseballs: baseballs.map(normalizeStored),
+      bobbleheads: bobbleheads.map(normalizeBobblehead),
       collections,
-      unassignedImages: await findUnassignedImages(baseballs)
+      unassignedImages: await findUnassignedImages(baseballs, baseballImagesDir),
+      unassignedBobbleheadImages: await findUnassignedImages(bobbleheads, bobbleheadImagesDir)
     };
   },
 
   async 'GET /api/unassigned-images'() {
     const { baseballs = [] } = await readJson('baseballs.json');
-    return { unassignedImages: await findUnassignedImages(baseballs) };
+    return { unassignedImages: await findUnassignedImages(baseballs, baseballImagesDir) };
+  },
+
+  async 'GET /api/unassigned-bobblehead-images'() {
+    const { bobbleheads = [] } = await readJson('bobbleheads.json');
+    return {
+      unassignedBobbleheadImages: await findUnassignedImages(bobbleheads, bobbleheadImagesDir)
+    };
   },
 
   async 'POST /api/images/discard'(req) {
     const body = await readBody(req);
     const { baseballs = [] } = await readJson('baseballs.json');
     const name = path.basename(String(body.name ?? ''));
-    const unassigned = await findUnassignedImages(baseballs);
+    const unassigned = await findUnassignedImages(baseballs, baseballImagesDir);
     if (!unassigned.includes(name)) {
       throw new Error('That file is either in use or no longer present.');
     }
-    await unlink(path.join(imagesDir, name));
+    await unlink(path.join(baseballImagesDir, name));
+    return { deleted: name };
+  },
+
+  async 'POST /api/bobblehead-images/discard'(req) {
+    const body = await readBody(req);
+    const { bobbleheads = [] } = await readJson('bobbleheads.json');
+    const name = path.basename(String(body.name ?? ''));
+    const unassigned = await findUnassignedImages(bobbleheads, bobbleheadImagesDir);
+    if (!unassigned.includes(name)) {
+      throw new Error('That file is either in use or no longer present.');
+    }
+    await unlink(path.join(bobbleheadImagesDir, name));
     return { deleted: name };
   },
 
@@ -172,11 +205,11 @@ const routes = {
       record.id = `${record.id}-${Date.now().toString(36)}`;
     }
 
-    // Keep existing photos plus any loose files dropped into images/ that nothing else claims.
+    // Keep existing photos plus any loose files dropped into images/baseballs/ that nothing else claims.
     const claimedElsewhere = new Set(
       (file.baseballs ?? []).filter((b) => b.id !== existing?.id).flatMap((b) => b.images ?? [])
     );
-    const onDisk = new Set(await listImageFiles());
+    const onDisk = new Set(await listImageFiles(baseballImagesDir));
     const requested = Array.isArray(body.images) ? body.images : (existing?.images ?? []);
     const keptImages = requested
       .map((name) => path.basename(String(name)))
@@ -184,14 +217,14 @@ const routes = {
 
     const added = [];
     for (const image of Array.isArray(body.newImages) ? body.newImages : []) {
-      added.push(await saveImage(record.id, image));
+      added.push(await saveImage(baseballImagesDir, record.id, image));
     }
     record.images = [...keptImages, ...added];
 
     // Delete image files that were removed from this baseball.
     for (const removed of existing?.images ?? []) {
       if (!record.images.includes(removed)) {
-        await unlink(path.join(imagesDir, removed)).catch(() => {});
+        await unlink(path.join(baseballImagesDir, removed)).catch(() => {});
       }
     }
 
@@ -209,10 +242,64 @@ const routes = {
     if (!target) throw Object.assign(new Error('Baseball not found.'), { status: 404 });
 
     for (const image of target.images ?? []) {
-      await unlink(path.join(imagesDir, image)).catch(() => {});
+      await unlink(path.join(baseballImagesDir, image)).catch(() => {});
     }
     file.baseballs = file.baseballs.filter((b) => b.id !== target.id);
     await writeJson('baseballs.json', file);
+    return { deleted: target.id };
+  },
+
+  async 'POST /api/bobbleheads'(req) {
+    const body = await readBody(req);
+    const file = await readJson('bobbleheads.json');
+    const existingIndex = body.originalId
+      ? (file.bobbleheads ?? []).findIndex((item) => item.id === body.originalId)
+      : -1;
+    const existing = existingIndex >= 0 ? file.bobbleheads[existingIndex] : null;
+    const record = buildBobblehead(body, existing?.id);
+
+    if (!existing && (file.bobbleheads ?? []).some((item) => item.id === record.id)) {
+      record.id = `${record.id}-${Date.now().toString(36)}`;
+    }
+
+    const claimedElsewhere = new Set(
+      (file.bobbleheads ?? []).filter((item) => item.id !== existing?.id).flatMap((item) => item.images ?? [])
+    );
+    const onDisk = new Set(await listImageFiles(bobbleheadImagesDir));
+    const requested = Array.isArray(body.images) ? body.images : (existing?.images ?? []);
+    const keptImages = requested
+      .map((name) => path.basename(String(name)))
+      .filter((name) => onDisk.has(name) && !claimedElsewhere.has(name));
+
+    const added = [];
+    for (const image of Array.isArray(body.newImages) ? body.newImages : []) {
+      added.push(await saveImage(bobbleheadImagesDir, record.id, image));
+    }
+    record.images = [...keptImages, ...added];
+
+    for (const removed of existing?.images ?? []) {
+      if (!record.images.includes(removed)) {
+        await unlink(path.join(bobbleheadImagesDir, removed)).catch(() => {});
+      }
+    }
+
+    if (existing) file.bobbleheads[existingIndex] = record;
+    else file.bobbleheads = [...(file.bobbleheads ?? []), record];
+    await writeJson('bobbleheads.json', file);
+    return { bobblehead: record };
+  },
+
+  async 'POST /api/bobbleheads/delete'(req) {
+    const body = await readBody(req);
+    const file = await readJson('bobbleheads.json');
+    const target = (file.bobbleheads ?? []).find((item) => item.id === body.id);
+    if (!target) throw Object.assign(new Error('Bobblehead not found.'), { status: 404 });
+
+    for (const image of target.images ?? []) {
+      await unlink(path.join(bobbleheadImagesDir, image)).catch(() => {});
+    }
+    file.bobbleheads = file.bobbleheads.filter((item) => item.id !== target.id);
+    await writeJson('bobbleheads.json', file);
     return { deleted: target.id };
   },
 
@@ -285,11 +372,17 @@ const routes = {
 };
 
 async function serveStatic(req, res, url) {
-  const isImage = url.pathname.startsWith('/images/');
+  const isBaseballImage = url.pathname.startsWith('/images/baseballs/');
+  const isBobbleheadImage = url.pathname.startsWith('/images/bobbleheads/');
+  const isImage = isBaseballImage || isBobbleheadImage;
   const isLib = url.pathname.startsWith('/lib/');
-  const baseDir = isImage ? imagesDir : isLib ? libDir : adminDir;
+  const baseDir = isBaseballImage
+    ? baseballImagesDir
+    : isBobbleheadImage
+      ? bobbleheadImagesDir
+      : isLib ? libDir : adminDir;
   const relative = isImage
-    ? url.pathname.slice('/images/'.length)
+    ? url.pathname.split('/').slice(3).join('/')
     : isLib
       ? url.pathname.slice('/lib/'.length)
       : url.pathname.slice(1) || 'index.html';

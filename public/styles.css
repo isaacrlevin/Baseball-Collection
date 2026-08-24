@@ -22,6 +22,28 @@ body {
   line-height: 1.5;
 }
 
+.site-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem 0;
+}
+
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+}
+
+.site-nav a:hover,
+.site-nav a[aria-current="page"] {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -157,6 +179,10 @@ main {
   background: var(--panel-2);
 }
 
+.card__image--baseball {
+  object-fit: contain;
+}
+
 .card__image--empty {
   display: grid;
   place-items: center;
@@ -278,26 +304,77 @@ main {
   border-radius: var(--radius);
   padding: 1.5rem;
   max-width: min(92vw, 900px);
+  width: min(92vw, 900px);
 }
 
 .lightbox::backdrop {
   background: rgba(6, 9, 15, 0.8);
 }
 
-.lightbox__images {
+.lightbox__stage {
   display: grid;
-  gap: 1rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.lightbox__images img {
+.lightbox__image {
   width: 100%;
+  height: min(70vh, 720px);
+  object-fit: contain;
   border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.lightbox__nav {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--panel-2);
+  color: var(--ink);
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox__counter {
+  margin: 0.75rem 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.lightbox__thumbnails {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.25rem;
+}
+
+.lightbox__thumbnail {
+  flex: 0 0 72px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.lightbox__thumbnail--active {
+  border-color: var(--accent);
+}
+
+.lightbox__thumbnail img {
+  display: block;
+  width: 68px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 5px;
 }
 
 .lightbox__close {
-  position: sticky;
-  top: 0;
   margin-left: auto;
+  margin-bottom: 0.5rem;
   display: block;
   background: var(--panel-2);
   color: var(--ink);
@@ -307,4 +384,24 @@ main {
   height: 2rem;
   font-size: 1.2rem;
   cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .lightbox {
+    padding: 0.75rem;
+  }
+
+  .lightbox__stage {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lightbox__image {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    height: 60vh;
+  }
+
+  .lightbox__nav {
+    justify-self: center;
+  }
 }
