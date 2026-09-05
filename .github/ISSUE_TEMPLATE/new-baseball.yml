@@ -1,0 +1,73 @@
+name: New baseball
+description: Add an autographed baseball to the collection from your phone.
+title: "[Baseball] "
+labels: ["new-baseball"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill in what you know and attach photo(s) of the ball. On the GitHub mobile
+        app, tap the photo icon in the "Photos" field below to attach directly from
+        your camera or library — the app inserts the image for you.
+
+        Submitting this form opens a pull request with the new entry, and comments
+        back here with a link. Nothing goes live until that pull request is merged.
+  - type: input
+    id: player
+    attributes:
+      label: Player
+      description: Primary signer's name.
+      placeholder: Nolan Ryan
+    validations:
+      required: true
+  - type: input
+    id: team
+    attributes:
+      label: Team
+      placeholder: Texas Rangers
+  - type: input
+    id: signedYear
+    attributes:
+      label: Signed year
+      placeholder: "1993"
+  - type: input
+    id: inscription
+    attributes:
+      label: Inscription
+      placeholder: HOF 99
+  - type: textarea
+    id: additionalSignatures
+    attributes:
+      label: Additional signatures
+      description: >
+        For team balls with more than one autograph, add one signer per line as
+        `Player | Team | Signed year | Inscription` (leave a field blank if unknown).
+      placeholder: |
+        Tom Seaver | New York Mets | 1994 |
+  - type: input
+    id: acquired
+    attributes:
+      label: Acquired
+      placeholder: Private signing
+  - type: input
+    id: authentication
+    attributes:
+      label: Authentication
+      placeholder: PSA/DNA
+  - type: input
+    id: collections
+    attributes:
+      label: Collections
+      description: Comma-separated collection ids (see the site footer or ask if unsure).
+      placeholder: hall-of-fame, cy-young
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+  - type: textarea
+    id: photos
+    attributes:
+      label: Photos
+      description: Attach one or more photos here (drag & drop, paste, or use the phone camera icon).
+    validations:
+      required: true

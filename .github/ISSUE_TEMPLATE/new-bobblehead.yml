@@ -1,0 +1,38 @@
+name: New bobblehead
+description: Add a bobblehead to the collection from your phone.
+title: "[Bobblehead] "
+labels: ["new-bobblehead"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill in what you know and attach photo(s) of the bobblehead. On the GitHub
+        mobile app, tap the photo icon in the "Photos" field below to attach
+        directly from your camera or library — the app inserts the image for you.
+
+        Submitting this form opens a pull request with the new entry, and comments
+        back here with a link. Nothing goes live until that pull request is merged.
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      placeholder: Ken Griffey Jr.
+    validations:
+      required: true
+  - type: input
+    id: year
+    attributes:
+      label: Year
+      placeholder: "2024"
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      placeholder: Stadium giveaway
+  - type: textarea
+    id: photos
+    attributes:
+      label: Photos
+      description: Attach one or more photos here (drag & drop, paste, or use the phone camera icon).
+    validations:
+      required: true
