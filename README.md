@@ -16,6 +16,25 @@ baseball collection and a bobblehead collection, plus a **local-only** managemen
 | `lib/baseball.mjs` | Shared record normalization / display-title helpers |
 | `scripts/build.mjs` | Static site generator → `dist/` |
 | `admin/`, `tools/admin-server.mjs` | Local management screen (never deployed) |
+| `.github/ISSUE_TEMPLATE/`, `scripts/intake.mjs` | Phone-friendly issue-form intake pipeline |
+
+## Adding items from your phone
+
+Open a new issue with the **New baseball** or **New bobblehead** template (Issues → New
+issue, from the GitHub mobile app or a mobile browser). Fill in the fields and attach a
+photo — the app's photo/camera icon inserts it into the "Photos" field for you.
+
+Submitting the issue triggers `.github/workflows/intake.yml`, which parses the form,
+downloads the photo(s), and opens a pull request adding the new record to `data/*.json`
+plus the image files under `images/`. It comments back on the issue with a link to that
+pull request. Nothing is published until you merge the pull request (from your phone, if
+you like) — merging auto-closes the issue and GitHub Actions rebuilds and publishes the
+site. If a required field is missing, it comments on the issue explaining what to fix;
+editing the issue re-runs the check automatically.
+
+This keeps `admin/`/`tools/admin-server.mjs` completely private (still local-only, still
+excluded from `dist/`) — the issue-form pipeline is the only way to add items remotely,
+and every change still lands as a reviewable pull request.
 
 ## Everyday use
 
