@@ -67,14 +67,50 @@ function parseIssueForm(body) {
   return fields;
 }
 
-function extractImageUrls(value) {
+/**
+ * Pulls photo URLs out of a field. GitHub inserts attachments as markdown
+ * (`![alt](url)`) from some clients and as HTML (`<img src="url">`) from
+ * others, so both are supported, plus plain pasted links.
+ */
+function extractImageUrls(value, { allowBareUrls = true } = {}) {
   const urls = new Set();
-  const markdownImage = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g;
-  let match;
-  while ((match = markdownImage.exec(value))) urls.add(match[1]);
-  if (urls.size === 0) {
-    const bareUrl = /https?:\/\/[^\s)]+/g;
+  const patterns = [
+    /!\[[^\]]*\]\(\s*(https?:\/\/[^\s)]+?)\s*(?:"[^"]*")?\s*\)/g,
+    /<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi
+  ];
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(value))) urls.add(match[1].trim());
+  }
+  if (urls.size === 0 && allowBareUrls) {
+    const bareUrl = /https?:\/\/[^\s)\]"'<>]+/g;
+    let match;
     while ((match = bareUrl.exec(value))) urls.add(match[0]);
+  }
+  return [...urls];
+}
+
+/** Removes image markup so photos pasted into a text field don't leak into notes. */
+function stripImageMarkup(value) {
+  return text(value)
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/<img\b[^>]*>/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Photos belong in the "Photos" field, but on mobile it's easy to attach them
+ * to another field (or to the title/body). Fall back to any image found
+ * elsewhere in the issue so a misplaced attachment still works.
+ */
+function collectPhotoUrls(fields) {
+  const fromPhotos = extractImageUrls(text(fields.Photos));
+  if (fromPhotos.length) return fromPhotos;
+  const urls = new Set();
+  for (const [label, value] of Object.entries(fields)) {
+    if (label === 'Photos') continue;
+    for (const url of extractImageUrls(text(value), { allowBareUrls: false })) urls.add(url);
   }
   return [...urls];
 }
@@ -145,7 +181,7 @@ async function processBaseball(fields) {
     ...parseAdditionalSignatures(fields['Additional signatures'])
   ];
 
-  const photoUrls = extractImageUrls(text(fields.Photos));
+  const photoUrls = collectPhotoUrls(fields);
   if (photoUrls.length === 0) throw new Error('Attach at least one photo in the "Photos" field.');
 
   const requestedCollections = text(fields.Collections)
@@ -164,7 +200,7 @@ async function processBaseball(fields) {
     signatures,
     acquired: fields.Acquired,
     authentication: fields.Authentication,
-    notes: fields.Notes,
+    notes: stripImageMarkup(fields.Notes),
     collections: recordCollections,
     images
   });
@@ -182,14 +218,14 @@ async function processBobblehead(fields) {
   const { bobbleheads = [] } = await readJson('bobbleheads.json');
   const existingIds = new Set(bobbleheads.map((b) => b.id));
 
-  const photoUrls = extractImageUrls(text(fields.Photos));
+  const photoUrls = collectPhotoUrls(fields);
   if (photoUrls.length === 0) throw new Error('Attach at least one photo in the "Photos" field.');
 
   const id = uniqueId(name, existingIds);
   const directory = path.join(imagesDir, 'bobbleheads');
   const images = await saveImages(directory, id, photoUrls);
 
-  const record = normalizeBobblehead({ id, name, year: fields.Year, notes: fields.Notes, images });
+  const record = normalizeBobblehead({ id, name, year: fields.Year, notes: stripImageMarkup(fields.Notes), images });
 
   bobbleheads.push(record);
   await writeJson('bobbleheads.json', { bobbleheads });
