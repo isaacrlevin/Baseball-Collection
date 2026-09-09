@@ -603,6 +603,16 @@
         "bryan-woo-2.jpg",
         "bryan-woo-3.jpg"
       ]
+    },
+    {
+      "id": "andres-mun-oz-funko-pop",
+      "name": "Andres Muñoz Funko Pop",
+      "year": "2026",
+      "notes": "",
+      "images": [
+        "andres-mun-oz-funko-pop.jpg",
+        "andres-mun-oz-funko-pop-2.jpg"
+      ]
     }
   ]
 }
